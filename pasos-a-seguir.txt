@@ -1,0 +1,274 @@
+Despues de instalar Dj Ango y configurar un entorno virtual debemos crear un projecto 
+--------------- 26/01/24 --------------------
+PASOS PREVIOS : 
+Instalar un entorno virtual 
+
+python -m venv <nombre del entorno>
+
+activar el entorno 
+source <nombre del entorno>/bin/activate
+
+para desactivar 
+deactivate
+
+instalar django 
+
+python -m pip install django
+
+1- Crear el projecto 
+	django-admin startproject mysite
+
+	Lo que hace ese comando es crear las carpetas default para el desarrollo
+	en django 
+2- Activar el servidor (una vez dentro de la carpeta mysite(outer)) 
+	python manage.py runserver 
+
+	Para activar el servidor y que te de el link del puerto en el q trabaja
+
+	En el caso de que el puerto este ocupado puedes pasar como parametro
+	un puerto especifico que quieras -> python manage.py runserver 8080
+
+	En el caso de que quieras usar ese puerto entonces puedes usar los 
+	siguientes comandos 
+	
+	lsof -i :8000 (:<nombre_del_puerto>) -> Nos da la informacion del PID
+	kill -9 <PID> -> corta los procesos en ese puerto
+
+3- creando una aplicacion dentro del projecto
+
+	python manage.py startapp <polls> nombre de la app q quieras
+	
+4- Creamos una vista 
+	
+	importamos el HttpsResponse
+	creamos una funcion que reciba como parametro un request y devuelva un 
+	HttpResponse()
+5- Añadimos un url en la carpeta de la aplicacion
+
+	importamos el path y el view
+	creamos una lista urlpatterns =[path("", views.index, name='')] 
+5- Añadimos el url en la pagina general de mysite 
+
+	importamos include 
+	en el urlpatterns general le añadimos el pattern de la app 
+	path("polls/"m include("polls.urls"))
+
+6- Corremos de vuelta el servidor para ver los cambios 
+	
+	python manage.py runserver 
+
+-------------------- 27/01/24 ------------------
+
+Databe setup 
+
+1- Entrar en mysite/settings.py 
+	si no vamos a usar SQLite3 para el dev, debemos configurar aqui 
+	la bd que vamos a utilizar 
+	En la parte de DATABASES 
+		definir la engine (leer en la doc los bindings)
+		name definir el nombre de la bd
+
+		si estamos en otra que no sea SQLite3 debemos proveer tambien
+		user, password, host
+
+2- Luego debemos configurar la timezone
+	en la parte de TIME_ZONE 
+
+3- Para crear las tablas hechas por default usar el comando 
+	python manage.py migrate
+
+4- Crear los modelos 
+	en la carpeta de la app polls/models.py 
+	Crear los modelos con Clases, importar el modulo de models 
+	cada clase recibe un parametro de models.Model 
+	Empezar a crear las tablas deseadas 
+
+5- Activar los modelos 
+
+	primero debemos agregar nuestros modelos a INSATLLED_APPS en la carpeta
+	mysite-settings.py, debemos agregar el path de polls/app.py, la clase de 	config que aperece ahi. 
+	polls.apps.PollsCongif -> Esta en este caso 
+
+5- Crear las migraciones 
+	python manage.py makemigrations polls
+
+	Si quieres ver que se ejecuto puedes usar el comando 
+		python manage.py sqlmigrate polls 0001
+
+6- Para aplicar los cambios en la bd 
+	python manage.py migrate
+
+7- (opcional) Probar la API 
+	python manage.py shell 
+		#importar el modelo de clases 
+		Question.objects.all() # Lista todos los objetos de la clase 
+		
+		from django.utils import timezone 
+		
+		#Creamos una fila para la tabla de columnas 
+		q = Question(question_text = "what's new", pub_date = timezone.now())
+
+		#guardamos los cambios 
+		q.save()
+
+		#podemos acceder al valor creado con 
+		-> q.id
+		-> q.question_text # Trae el valor de la question 
+		-> q.pub_date # La fecha de publicacion 
+		
+		# se puede sobre escribir el valor de la pregunta con 
+		q.question_text = <nueva pregunta>
+		q.save() # guardar los cambios 
+
+		# Es recomendable crear metodos de __Str__ 
+		# Para que al invocar Question.objects.all() traiga valores 
+		que si se puedan interpretar
+
+		# Se pueden crear tambien metodos propios 
+		
+		#Si queremos instanciar una nueva relacion de: 
+			pregunta -> opciones 
+
+		se puede usando lo siguiente 
+
+			#instanciamos una variable con el modelo de la clase q
+
+			q = Question.objects.get(pk=1)
+			
+			#Creamos una choice 
+			
+			<instancia>.<nombre_instancia a crear>_set.create(<rellenar con los campos deseados>)
+			
+
+			#En nuestro caso
+			q.choice_set.create(choice_text='not much', votes=0)
+
+			# podemos listar las choices relacionadas con la pregunta 
+
+			q.choice_set.all() -> Se listan todas 
+			
+			#q.choice_set.count() -> Te dice cuantas instancias hay relacionadas a la pregunta
+
+			#Podemos filtrar las choices creadas dependiento de la fecha 
+
+			Choice.objects.filter(question__pub_date__year = curren_year) 
+
+			#podemos instanciar una variable con una choice 
+			c = q.choice_set.filter(choice_text__startswith="not")
+			
+			#Podemos eliminar una choice 
+			c.delete()
+
+8- Crear un usuario admin 
+
+	python manage.py createsuperuser
+
+		definir el username -> admin
+		definir el email -> admin@example.com
+		definir el pswd -> #pass123
+	
+	Corremos el servidor 
+		python manage.py runserver 
+
+	entramos en la ruta /admin 
+
+
+	Ingresamos las credenciales creadas 
+
+9- Definimos la app para que sea modificable al admin 
+
+	en la carpeta <nombre_de_la_app>/admin.py importamos el modelo Question 
+	
+	polls/admin.py -> En nuestro caso 	
+
+	from .models import Question 
+	
+	admin.site.register(Question)	
+
+10- Curiosear con lo que se puede hacer en el panel de admin (Opcional)
+
+	-Modificar las Questions 
+	-Crear nuevas 
+	-Eliminar 
+
+---> break 1: Tutorial 3 <--- 
+
+1- Definimos mas vistas:
+
+	En el archivo polls/views.py 
+		* def detail(request, question_id):
+			return HttpResponse("Youre looking to question %s" %question_id)
+
+		- Lo mismo para results y vote 
+
+2- Añadimos las nuevas vistas al archivo polls.urls 
+
+	path("<int:question_id/">, views.details, name = "detail") -> Definimos la ruta con <int:<variable>>
+		Pasamos  la vista, y le asignamos un nombre 
+
+	Hacemos lo mismo para las demas vistas 
+
+3- Añadimos funcionalidad a las vistas 
+
+	importamos los modelos 
+
+	from .models import Question
+
+	def index(request):
+		latest_question_list = Question.objects.order_by("-pub_date")[:5] 
+		output = ", ".join([q.question_text for q in latest question list])
+		return HttpResponse(output)
+
+	#lo de arrbia devuelve las 5 ultimas questions 
+
+4- Creamos Templates para las vistas 
+
+	Creamos una carpeta Templates y adentro una carpeta polls 
+		/polls/templates/polls/index.html
+
+	Rellenamos el archivo html 
+
+	Ejemplo : 
+		{% if latest_question_list %}
+   		   <ul>
+			{% for question in latest_question_list %}
+       			   <li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>
+ 			 {% endfor %}
+   		    </ul>
+		{% else %}
+    		  <p>No polls are available.</p>
+		{% endif %}
+
+	El ejemplo esta con la sintaxis de HTML incompleto, para proyectos grandes debes usar la sintaxis completa de HTML 
+
+5- Optimizamos las vistas con shortcuts usando render 
+
+	from django.shortcuts import render 
+
+	def index(request):
+		latest_questions_list = Question.objects.order_by("-pub_date")[:5]
+		context = {"latest_questions_list": latest_question_list}
+		return render(request, "polls/index.html", context)
+
+	Tambien podemos manejar errores de not found con un shortcut
+	from django.shortcuts import get_objects_or_404
+	
+	def detail(request, question_id):
+		question = g_o_404(Question, pk=question_id)
+		return render(request, "polls/detail.hmtl", {"question":question})
+
+	question = get_object_or_404(<nombre del modelo>, <parametro a buscar>)
+	# en este ejemplo seria 
+	question = get_object_or_404(Question,pk=question_id)	
+6- Definimos un HTML para details
+
+	Seguir los pasos que hicimos al crear index.html 
+
+7- Removemos hardcode URLS 
+	
+	- Agregamos un app_name a urls.py en polls 
+		app_name = "polls"
+
+	- Cambiamos el hardcode url en index.html 
+	
+	<a href"{% 'polls:detail' question.id %}">{{ question.question_text}}</a>	 
